@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { signToken, verifyToken } from '@/lib/auth/session';
+import { verifyToken } from '@/lib/auth/session';
 
 const protectedRoutes = '/dashboard';
 
@@ -13,34 +13,28 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/sign-in', request.url));
   }
 
-  let res = NextResponse.next();
-
-  if (sessionCookie && request.method === 'GET') {
+  // Validate session if it exists and we're on a protected route
+  if (sessionCookie && isProtectedRoute) {
     try {
-      const parsed = await verifyToken(sessionCookie.value);
-      const expiresInOneDay = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-      res.cookies.set({
-        name: 'session',
-        value: await signToken({
-          ...parsed,
-          expires: expiresInOneDay.toISOString()
-        }),
-        httpOnly: true,
-        secure: true,
-        sameSite: 'lax',
-        expires: expiresInOneDay
-      });
-    } catch (error) {
-      console.error('Error updating session:', error);
-      res.cookies.delete('session');
-      if (isProtectedRoute) {
-        return NextResponse.redirect(new URL('/sign-in', request.url));
+      const sessionData = await verifyToken(sessionCookie.value);
+      
+      // Check if session is expired
+      if (!sessionData || !sessionData.user || !sessionData.expires) {
+        throw new Error('Invalid session data');
       }
+      
+      if (new Date(sessionData.expires) < new Date()) {
+        throw new Error('Session expired');
+      }
+    } catch (error) {
+      console.error('Session validation failed:', error);
+      const response = NextResponse.redirect(new URL('/sign-in', request.url));
+      response.cookies.delete('session');
+      return response;
     }
   }
 
-  return res;
+  return NextResponse.next();
 }
 
 export const config = {
