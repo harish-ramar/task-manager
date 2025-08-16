@@ -296,11 +296,11 @@ export default function TaskManager() {
   return (
     <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="flex justify-between items-center px-8 py-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Board</h1>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 sm:gap-0 px-4 sm:px-6 lg:px-8 py-4 sm:py-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Board</h1>
         <Button 
           onClick={() => setIsCreateModalOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+          className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm w-full sm:w-auto"
         >
           <Plus className="w-4 h-4 mr-2" />
           New task
@@ -309,7 +309,142 @@ export default function TaskManager() {
 
       {/* Kanban Board */}
       <div className="flex-1 overflow-hidden">
-        <div className="flex h-full">
+        {/* Mobile: Vertical Stack */}
+        <div className="flex flex-col md:hidden h-full overflow-y-auto">
+          {Object.entries(statusConfig).map(([status, config]) => {
+            const statusTasks = getTasksByStatus(status);
+            const IconComponent = config.icon;
+            
+            return (
+              <div
+                key={status}
+                className={`flex flex-col ${config.bgColor} border-b border-gray-200 dark:border-gray-700 last:border-b-0`}
+              >
+                {/* Column Header */}
+                <div className="px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <IconComponent className={`w-4 h-4 ${config.color}`} />
+                    <h3 className="font-semibold text-base text-gray-900 dark:text-white">
+                      {config.label}
+                    </h3>
+                    <span className="text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full font-medium">
+                      {statusTasks.length}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Column Content - Mobile */}
+                <div className="p-3 space-y-3">
+                  {statusTasks.map((task) => (
+                    <Card
+                      key={task.id}
+                      className="p-3 bg-white dark:bg-gray-800 hover:shadow-md transition-all cursor-pointer border border-gray-200 dark:border-gray-700 rounded-lg"
+                      onClick={() => openDetailModal(task)}
+                    >
+                      <div className="space-y-2">
+                        {/* Task Title */}
+                        <h4 className="font-semibold text-gray-900 dark:text-white leading-tight text-sm">
+                          {task.title}
+                        </h4>
+
+                        {/* Task Description */}
+                        {task.description && (
+                          <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed">
+                            {task.description}
+                          </p>
+                        )}
+
+                        {/* Task Meta */}
+                        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                          <div className="flex items-center gap-1">
+                            <User className="w-3 h-3" />
+                            <span className="truncate max-w-[80px]">
+                              {task.createdBy.name || task.createdBy.email.split('@')[0]}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            {new Date(task.createdAt).toLocaleDateString()}
+                          </div>
+                        </div>
+
+                        {/* Task Actions/Badges */}
+                        <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700">
+                          <div className="flex items-center gap-2">
+                            {task.media.length > 0 && (
+                              <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 px-1.5 py-0.5 rounded">
+                                <Paperclip className="w-2.5 h-2.5" />
+                                <span>{task.media.length}</span>
+                              </div>
+                            )}
+                            {task.comments.length > 0 && (
+                              <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 px-1.5 py-0.5 rounded">
+                                <MessageSquare className="w-2.5 h-2.5" />
+                                <span>{task.comments.length}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditModal(task);
+                              }}
+                              className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            >
+                              <Edit className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteTask(task.id);
+                              }}
+                              className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+
+                  {/* Empty State - Mobile */}
+                  {statusTasks.length === 0 && (
+                    <div className="text-center text-gray-500 dark:text-gray-400 py-8 px-3">
+                      <div className={`w-8 h-8 rounded-full ${config.bgColor} flex items-center justify-center mx-auto mb-2`}>
+                        <IconComponent className={`w-4 h-4 ${config.color}`} />
+                      </div>
+                      <p className="text-xs font-medium">No tasks in {config.label.toLowerCase()}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Add Task Button - Mobile */}
+                <div className="p-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, status: status as TaskStatus }));
+                      setIsCreateModalOpen(true);
+                    }}
+                    className="w-full justify-start text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 py-2 text-sm"
+                  >
+                    <Plus className="w-3 h-3 mr-2" />
+                    Add task
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop: Horizontal Layout */}
+        <div className="hidden md:flex h-full">
           {Object.entries(statusConfig).map(([status, config]) => {
             const statusTasks = getTasksByStatus(status);
             const IconComponent = config.icon;

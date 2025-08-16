@@ -90,7 +90,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
   ]);
 
-  redirect('/dashboard');
+  redirect('/tasks');
 });
 
 const signUpSchema = z.object({
@@ -204,14 +204,21 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     setSession(createdUser)
   ]);
 
-  redirect('/dashboard');
+  redirect('/tasks');
 });
 
 export async function signOut() {
-  const user = (await getUser()) as User;
-  const userWithTeam = await getUserWithTeam(user.id);
-  await logActivity(userWithTeam?.teamId, user.id, ActivityType.SIGN_OUT);
+  try {
+    const user = (await getUser()) as User;
+    const userWithTeam = await getUserWithTeam(user.id);
+    await logActivity(userWithTeam?.teamId, user.id, ActivityType.SIGN_OUT);
+  } catch (error) {
+    // If user is already signed out or session is invalid, continue with sign out
+    console.log('User already signed out or session invalid');
+  }
+  
   (await cookies()).delete('session');
+  redirect('/sign-in');
 }
 
 const updatePasswordSchema = z.object({
