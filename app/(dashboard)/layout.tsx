@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { use, useState, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
-import { CircleIcon, Home, LogOut } from 'lucide-react';
+import { CircleIcon, Home, LogOut, CheckSquare, BarChart3, Settings } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { signOut } from '@/app/(login)/actions';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { User } from '@/lib/db/schema';
 import useSWR, { mutate } from 'swr';
 
@@ -60,9 +60,21 @@ function UserMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="flex flex-col gap-1">
         <DropdownMenuItem className="cursor-pointer">
+          <Link href="/tasks" className="flex w-full items-center">
+            <CheckSquare className="mr-2 h-4 w-4" />
+            <span>Tasks</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem className="cursor-pointer">
           <Link href="/dashboard" className="flex w-full items-center">
             <Home className="mr-2 h-4 w-4" />
             <span>Dashboard</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem className="cursor-pointer">
+          <Link href="/dashboard/activity" className="flex w-full items-center">
+            <BarChart3 className="mr-2 h-4 w-4" />
+            <span>Activity</span>
           </Link>
         </DropdownMenuItem>
         <form action={handleSignOut} className="w-full">
@@ -79,13 +91,42 @@ function UserMenu() {
 }
 
 function Header() {
+  const pathname = usePathname();
+  
   return (
     <header className="border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
         <Link href="/" className="flex items-center">
           <CircleIcon className="h-6 w-6 text-orange-500" />
-          <span className="ml-2 text-xl font-semibold text-gray-900">ACME</span>
+          <span className="ml-2 text-xl font-semibold text-gray-900">Task Manager</span>
         </Link>
+        
+        {/* Navigation Links */}
+        <nav className="hidden md:flex items-center space-x-6">
+          <Link 
+            href="/tasks" 
+            className={`flex items-center text-sm font-medium transition-colors ${
+              pathname === '/tasks' 
+                ? 'text-orange-500' 
+                : 'text-gray-700 hover:text-gray-900'
+            }`}
+          >
+            <CheckSquare className="mr-2 h-4 w-4" />
+            Tasks
+          </Link>
+          <Link 
+            href="/dashboard" 
+            className={`flex items-center text-sm font-medium transition-colors ${
+              pathname === '/dashboard' 
+                ? 'text-orange-500' 
+                : 'text-gray-700 hover:text-gray-900'
+            }`}
+          >
+            <Home className="mr-2 h-4 w-4" />
+            Dashboard
+          </Link>
+        </nav>
+        
         <div className="flex items-center space-x-4">
           <Suspense fallback={<div className="h-9" />}>
             <UserMenu />

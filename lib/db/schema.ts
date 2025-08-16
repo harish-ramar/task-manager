@@ -63,6 +63,45 @@ export const invitations = pgTable('invitations', {
   status: varchar('status', { length: 20 }).notNull().default('pending'),
 });
 
+export const tasks = pgTable('tasks', {
+  id: serial('id').primaryKey(),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  status: varchar('status', { length: 20 }).notNull().default('todo'),
+  createdBy: integer('created_by')
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const taskMedia = pgTable('task_media', {
+  id: serial('id').primaryKey(),
+  taskId: integer('task_id')
+    .notNull()
+    .references(() => tasks.id, { onDelete: 'cascade' }),
+  fileName: varchar('file_name', { length: 255 }).notNull(),
+  fileType: varchar('file_type', { length: 100 }).notNull(),
+  fileUrl: text('file_url').notNull(),
+  fileSize: integer('file_size').notNull(),
+  uploadedBy: integer('uploaded_by')
+    .notNull()
+    .references(() => users.id),
+  uploadedAt: timestamp('uploaded_at').notNull().defaultNow(),
+});
+
+export const taskComments = pgTable('task_comments', {
+  id: serial('id').primaryKey(),
+  taskId: integer('task_id')
+    .notNull()
+    .references(() => tasks.id, { onDelete: 'cascade' }),
+  comment: text('comment').notNull(),
+  createdBy: integer('created_by')
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
 export const teamsRelations = relations(teams, ({ many }) => ({
   teamMembers: many(teamMembers),
   activityLogs: many(activityLogs),
@@ -72,6 +111,9 @@ export const teamsRelations = relations(teams, ({ many }) => ({
 export const usersRelations = relations(users, ({ many }) => ({
   teamMembers: many(teamMembers),
   invitationsSent: many(invitations),
+  tasksCreated: many(tasks),
+  taskMediaUploaded: many(taskMedia),
+  taskComments: many(taskComments),
 }));
 
 export const invitationsRelations = relations(invitations, ({ one }) => ({
@@ -107,6 +149,37 @@ export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
   }),
 }));
 
+export const tasksRelations = relations(tasks, ({ one, many }) => ({
+  createdBy: one(users, {
+    fields: [tasks.createdBy],
+    references: [users.id],
+  }),
+  media: many(taskMedia),
+  comments: many(taskComments),
+}));
+
+export const taskMediaRelations = relations(taskMedia, ({ one }) => ({
+  task: one(tasks, {
+    fields: [taskMedia.taskId],
+    references: [tasks.id],
+  }),
+  uploadedBy: one(users, {
+    fields: [taskMedia.uploadedBy],
+    references: [users.id],
+  }),
+}));
+
+export const taskCommentsRelations = relations(taskComments, ({ one }) => ({
+  task: one(tasks, {
+    fields: [taskComments.taskId],
+    references: [tasks.id],
+  }),
+  createdBy: one(users, {
+    fields: [taskComments.createdBy],
+    references: [users.id],
+  }),
+}));
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Team = typeof teams.$inferSelect;
@@ -117,6 +190,12 @@ export type ActivityLog = typeof activityLogs.$inferSelect;
 export type NewActivityLog = typeof activityLogs.$inferInsert;
 export type Invitation = typeof invitations.$inferSelect;
 export type NewInvitation = typeof invitations.$inferInsert;
+export type Task = typeof tasks.$inferSelect;
+export type NewTask = typeof tasks.$inferInsert;
+export type TaskMedia = typeof taskMedia.$inferSelect;
+export type NewTaskMedia = typeof taskMedia.$inferInsert;
+export type TaskComment = typeof taskComments.$inferSelect;
+export type NewTaskComment = typeof taskComments.$inferInsert;
 export type TeamDataWithMembers = Team & {
   teamMembers: (TeamMember & {
     user: Pick<User, 'id' | 'name' | 'email'>;
@@ -134,4 +213,16 @@ export enum ActivityType {
   REMOVE_TEAM_MEMBER = 'REMOVE_TEAM_MEMBER',
   INVITE_TEAM_MEMBER = 'INVITE_TEAM_MEMBER',
   ACCEPT_INVITATION = 'ACCEPT_INVITATION',
+  CREATE_TASK = 'CREATE_TASK',
+  UPDATE_TASK = 'UPDATE_TASK',
+  DELETE_TASK = 'DELETE_TASK',
+  ADD_TASK_COMMENT = 'ADD_TASK_COMMENT',
+  UPLOAD_TASK_MEDIA = 'UPLOAD_TASK_MEDIA',
+}
+
+export enum TaskStatus {
+  TODO = 'todo',
+  IN_PROGRESS = 'in_progress',
+  REVIEW = 'review',
+  DONE = 'done',
 }

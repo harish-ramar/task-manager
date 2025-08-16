@@ -1,6 +1,18 @@
 import { desc, and, eq, isNull } from 'drizzle-orm';
 import { db } from './drizzle';
-import { activityLogs, teamMembers, teams, users } from './schema';
+import { 
+  activityLogs, 
+  teamMembers, 
+  teams, 
+  users, 
+  tasks, 
+  taskMedia, 
+  taskComments,
+  NewTask,
+  NewTaskComment,
+  NewTaskMedia,
+  TaskStatus
+} from './schema';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
 
@@ -104,4 +116,166 @@ export async function getTeamForUser() {
   });
 
   return result?.team || null;
+}
+
+// Task-related queries
+export async function getTasks() {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  return await db.query.tasks.findMany({
+    orderBy: desc(tasks.createdAt),
+    with: {
+      createdBy: {
+        columns: {
+          id: true,
+          name: true,
+          email: true
+        }
+      },
+      media: {
+        with: {
+          uploadedBy: {
+            columns: {
+              id: true,
+              name: true
+            }
+          }
+        }
+      },
+      comments: {
+        orderBy: desc(taskComments.createdAt),
+        with: {
+          createdBy: {
+            columns: {
+              id: true,
+              name: true
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+export async function getTaskById(taskId: number) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  return await db.query.tasks.findFirst({
+    where: eq(tasks.id, taskId),
+    with: {
+      createdBy: {
+        columns: {
+          id: true,
+          name: true,
+          email: true
+        }
+      },
+      media: {
+        with: {
+          uploadedBy: {
+            columns: {
+              id: true,
+              name: true
+            }
+          }
+        }
+      },
+      comments: {
+        orderBy: desc(taskComments.createdAt),
+        with: {
+          createdBy: {
+            columns: {
+              id: true,
+              name: true
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+export async function createTask(taskData: Omit<NewTask, 'createdBy'>) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const [newTask] = await db.insert(tasks).values({
+    ...taskData,
+    createdBy: user.id
+  }).returning();
+
+  return newTask;
+}
+
+export async function updateTask(taskId: number, updates: Partial<Pick<NewTask, 'title' | 'description' | 'status'>>) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const [updatedTask] = await db.update(tasks)
+    .set({
+      ...updates,
+      updatedAt: new Date()
+    })
+    .where(eq(tasks.id, taskId))
+    .returning();
+
+  return updatedTask;
+}
+
+export async function deleteTask(taskId: number) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  await db.delete(tasks).where(eq(tasks.id, taskId));
+}
+
+export async function addTaskComment(taskId: number, comment: string) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const [newComment] = await db.insert(taskComments).values({
+    taskId,
+    comment,
+    createdBy: user.id
+  }).returning();
+
+  return newComment;
+}
+
+export async function addTaskMedia(taskId: number, mediaData: Omit<NewTaskMedia, 'taskId' | 'uploadedBy'>) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const [newMedia] = await db.insert(taskMedia).values({
+    ...mediaData,
+    taskId,
+    uploadedBy: user.id
+  }).returning();
+
+  return newMedia;
+}
+
+export async function deleteTaskMedia(mediaId: number) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  await db.delete(taskMedia).where(eq(taskMedia.id, mediaId));
 }
