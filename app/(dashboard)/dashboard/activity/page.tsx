@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Settings,
@@ -9,10 +12,15 @@ import {
   UserMinus,
   Mail,
   CheckCircle,
+  Plus,
+  Edit,
+  Trash2,
+  MessageSquare,
+  Paperclip,
+  Loader2,
   type LucideIcon,
 } from 'lucide-react';
 import { ActivityType } from '@/lib/db/schema';
-import { getActivityLogs } from '@/lib/db/queries';
 
 const iconMap: Record<ActivityType, LucideIcon> = {
   [ActivityType.SIGN_UP]: UserPlus,
@@ -25,6 +33,11 @@ const iconMap: Record<ActivityType, LucideIcon> = {
   [ActivityType.REMOVE_TEAM_MEMBER]: UserMinus,
   [ActivityType.INVITE_TEAM_MEMBER]: Mail,
   [ActivityType.ACCEPT_INVITATION]: CheckCircle,
+  [ActivityType.CREATE_TASK]: Plus,
+  [ActivityType.UPDATE_TASK]: Edit,
+  [ActivityType.DELETE_TASK]: Trash2,
+  [ActivityType.ADD_TASK_COMMENT]: MessageSquare,
+  [ActivityType.UPLOAD_TASK_MEDIA]: Paperclip,
 };
 
 function getRelativeTime(date: Date) {
@@ -63,13 +76,90 @@ function formatAction(action: ActivityType): string {
       return 'You invited a team member';
     case ActivityType.ACCEPT_INVITATION:
       return 'You accepted an invitation';
+    case ActivityType.CREATE_TASK:
+      return 'You created a new task';
+    case ActivityType.UPDATE_TASK:
+      return 'You updated a task';
+    case ActivityType.DELETE_TASK:
+      return 'You deleted a task';
+    case ActivityType.ADD_TASK_COMMENT:
+      return 'You added a comment to a task';
+    case ActivityType.UPLOAD_TASK_MEDIA:
+      return 'You uploaded media to a task';
     default:
       return 'Unknown action occurred';
   }
 }
 
-export default async function ActivityPage() {
-  const logs = await getActivityLogs();
+export default function ActivityPage() {
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchActivityLogs() {
+      try {
+        const response = await fetch('/api/activity');
+        if (response.ok) {
+          const data = await response.json();
+          setLogs(data);
+        } else {
+          setError('Failed to fetch activity logs');
+        }
+      } catch (err) {
+        setError('Error loading activity logs');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchActivityLogs();
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="flex-1 p-4 lg:p-8">
+        <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
+          Activity Log
+        </h1>
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
+              <span className="ml-2 text-gray-600">Loading activity...</span>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="flex-1 p-4 lg:p-8">
+        <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
+          Activity Log
+        </h1>
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col items-center justify-center text-center py-12">
+              <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Error loading activity
+              </h3>
+              <p className="text-sm text-gray-500">{error}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+    );
+  }
 
   return (
     <section className="flex-1 p-4 lg:p-8">
